@@ -33,8 +33,8 @@
 
 using System;
 using System.Globalization;
-using System.Web;
-using System.Xml;
+using System.Collections; //list
+using System.Xml.Linq;
 
 namespace Delicious
 {
@@ -49,13 +49,13 @@ namespace Delicious
                 {
                     value = new Uri (value).ToString();
                 }
-                catch (UriFormatException e)
+                catch (System.FormatException e)  //UriFormatException is not supported in the portable libraries
                 {
-                    UriFormatException ufe = new UriFormatException ("Delicious.Net was unable to parse the url \"" + value + "\".\n\n" + e);
+                    FormatException ufe = new FormatException("Delicious.Net was unable to parse the url \"" + value + "\".\n\n" + e);
                     throw (ufe);
                 }
             }
-            value = HttpUtility.UrlEncode (value);
+            value = Uri.EscapeDataString(value); //HttpUtility.UrlEncode  is not supported in the portable libraries
 
             // insert the '?' if needed
             int qLocation = baseUrl.LastIndexOf ('?');
@@ -85,25 +85,30 @@ namespace Delicious
 		}
 
 
-		internal static string ParseForResultCode (XmlElement xmlElement)
+        // TODO don't really know what this is doing, should look at the sample xml
+		internal static string ParseForResultCode (XDocument xmlDoc) //XElement xmlElement)
 		{
+            return xmlDoc == null? string.Empty : xmlDoc.ToString();
+            /*
+            XElement xmlElement = xmlDoc.FirstNode();
 			if (xmlElement == null)
 				return String.Empty;
-
-			if (xmlElement.Attributes.Count > 0)
-			{
-				XmlAttribute xmlAttribute = xmlElement.Attributes[ 0 ];
+            System.Collections.Generic.List<XAttribute> attributes = new System.Collections.Generic.List<XAttribute>(xmlElement.Attributes());
+            if (attributes.Count > 0)
+            {
+				XAttribute xmlAttribute = attributes[0];
 				if (xmlAttribute == null)
 					return String.Empty;
 
 				return xmlAttribute.Value;
 			}
-			else if (xmlElement.InnerText.Length > 0)
+			else if (xmlElement.Value.Length > 0)
 			{
-				return xmlElement.InnerText;
+				return xmlElement.Value;
 			}
 
-			return xmlElement.Value;
+            return String.Empty;
+             * */
 		}
 	}
 }

@@ -33,7 +33,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Xml;
+using System.Xml.Linq;
 
 namespace Delicious
 {
@@ -272,10 +272,14 @@ namespace Delicious
 												 ((replace) ? Constants.UrlParameter.Yes : Constants.UrlParameter.No));
 			if (!shared)
 				relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.Shared, Constants.UrlParameter.No);
-
-			XmlDocument xmlDoc = Connection.Connect (relativeUrl);
-			string resultCode = Utilities.ParseForResultCode (xmlDoc.DocumentElement);
+            
+            Connection.Connect(relativeUrl);
+            return true; // doesn't have a result from the request
+            /*
+			XDocument xmlDoc = Connection.Connect (relativeUrl);
+			string resultCode = Utilities.ParseForResultCode (xmlDoc);
 			return (resultCode == Constants.ReturnCode.Done);
+             * */
 		}
 
 
@@ -291,10 +295,14 @@ namespace Delicious
 
 			string relativeUrl = Constants.RelativeUrl.PostsDelete;
 			relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.Url, url);
-
-			XmlDocument xmlDoc = Connection.Connect (relativeUrl);
-			string resultCode = Utilities.ParseForResultCode (xmlDoc.DocumentElement);
+            
+            Connection.Connect(relativeUrl);
+            return true; // doesn't have a result from the request
+            /*
+			XDocument xmlDoc = Connection.Connect (relativeUrl);
+			string resultCode = Utilities.ParseForResultCode (xmlDoc);
 			return (resultCode == Constants.ReturnCode.Done);
+             * */
 		}
 
 
@@ -315,8 +323,11 @@ namespace Delicious
 		/// <returns>a <c>string</c> of raw xml data</returns>
 		public static string GetRawXml ()
 		{
+            throw new NotImplementedException();
+            /*
 			string relativeUrl = Constants.RelativeUrl.PostsAll;
-			return Connection.GetRawXml (relativeUrl);
+			return Connection.Connect (relativeUrl).ToString(); // TODO this needs to be changed to actually wait on the 'result recieved' event I'm going to start throwing
+             * */
 		}
 
 
@@ -327,14 +338,17 @@ namespace Delicious
 		/// <returns>List of <c>Post</c> objects</returns>
 		public static List<Post> Get (string filterTag)
 		{
+            throw new NotImplementedException();
+            /*
 			string relativeUrl = Constants.RelativeUrl.PostsAll;
 			if (filterTag != null && filterTag.Length > 0)
 				relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.Tag, filterTag);
 
-			XmlDocument xmlDoc = Connection.Connect (relativeUrl);
-			XmlNodeList nodeList = xmlDoc.DocumentElement.GetElementsByTagName (Constants.XmlTag.Post);
+			XDocument xmlDoc = Connection.Connect (relativeUrl);
+			System.Collections.Generic.List<XElement> nodeList = new System.Collections.Generic.List<XElement>(xmlDoc.Elements (Constants.XmlTag.Post));
 
 			return ParsePosts (nodeList);
+             * */
 		}
 
 
@@ -357,7 +371,9 @@ namespace Delicious
 		/// <param name="url">URL of the post to retrieve (return a single <c>Post</c> object)</param>
 		/// <returns>ArrayList of <c>Post</c> objects</returns>
 		public static List<Post> Get (string filterTag, DateTime date, string url)
-		{
+        {
+            throw new NotImplementedException();
+            /*
 			string api = Constants.RelativeUrl.PostsGet;
 			if (filterTag != null && filterTag.Length > 0)
 				api = Utilities.AddParameter (api, Constants.UrlParameter.Tag, filterTag);
@@ -365,9 +381,10 @@ namespace Delicious
 				api = Utilities.AddParameter (api, Constants.UrlParameter.Date, date.ToUniversalTime().ToString());
 			if (url != null && url.Length > 0)
 				api = Utilities.AddParameter (api, Constants.UrlParameter.Url, url);
-			System.Xml.XmlDocument xmlDoc = Connection.Connect (api);
-			XmlNodeList nodeList = xmlDoc.DocumentElement.GetElementsByTagName (Constants.XmlTag.Post);
-			return ParsePosts (nodeList);
+			XDocument xmlDoc = Connection.Connect (api);
+            System.Collections.Generic.List<XElement> nodeList = new System.Collections.Generic.List<XElement>(xmlDoc.Elements(Constants.XmlTag.Post));
+            return ParsePosts(nodeList);
+             * */
 		}
 
 
@@ -406,14 +423,17 @@ namespace Delicious
 		/// <returns>A list of <c>Post</c> objects from your Inbox.</returns>
 		public static List<Post> GetPostsInInbox (DateTime date)
 		{
+            throw new NotImplementedException();
+            /*
 			string relativeUrl = Constants.RelativeUrl.InboxGet;
 			if (date != DateTime.MinValue)
 				relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.Date, date.ToUniversalTime().ToString());
 
-			XmlDocument xmlDoc = Connection.Connect (relativeUrl);
-			XmlNodeList nodeList = xmlDoc.DocumentElement.GetElementsByTagName (Constants.XmlTag.Post);
+			XDocument xmlDoc = Connection.Connect (relativeUrl);
+            System.Collections.Generic.List<XElement> nodeList = new System.Collections.Generic.List<XElement>(xmlDoc.Elements(Constants.XmlTag.Post));
 
 			return ParsePosts (nodeList);
+             * */
 		}
 
 
@@ -449,6 +469,8 @@ namespace Delicious
 		/// <returns>A list of recent <c>Post</c> objects.</returns>
 		public static List<Post> GetRecentPosts (string filterTag, int count)
 		{
+            throw new NotImplementedException();
+            /*
 			if (count <= 0)
 				count = Constants.DefaultPostCount;
 			if (count > Constants.MaxPostCount)
@@ -458,28 +480,28 @@ namespace Delicious
 			relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.Count, count.ToString());
 			if (filterTag != null && filterTag.Length > 0)
 				relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.Tag, filterTag);
-			XmlDocument xmlDoc = Connection.Connect (relativeUrl);
-			XmlNodeList nodeList = xmlDoc.DocumentElement.GetElementsByTagName (Constants.XmlTag.Post);
-
-			return ParsePosts (nodeList);
+			XDocument xmlDoc = Connection.Connect (relativeUrl);
+            System.Collections.Generic.List<XElement> nodeList = new System.Collections.Generic.List<XElement>(xmlDoc.Elements(Constants.XmlTag.Post));
+            return ParsePosts(nodeList);
+             * */
 		}
 
 
-		private static List<Post> ParsePosts (XmlNodeList nodeList)
+		private static List<Post> ParsePosts (System.Collections.Generic.List<XElement> nodeList)
 		{
 			List<Post> posts = new List<Post> (nodeList.Count);
 
-            foreach (XmlNode node in nodeList)
+            foreach (XElement node in nodeList)
             {
-                string href = node.Attributes[ Constants.XmlAttribute.Href ].Value;
-                string description = node.Attributes[ Constants.XmlAttribute.Description ].Value;
-                string hash = node.Attributes[ Constants.XmlAttribute.Hash ].Value;
-                string tag = node.Attributes[ Constants.XmlAttribute.Tag ].Value;
-                string time = node.Attributes[ Constants.XmlAttribute.Time ].Value;
-                string extended = (node.Attributes[ Constants.XmlAttribute.Extended ] == null) ? String.Empty : node.Attributes[ Constants.XmlAttribute.Extended ].Value;
+                string href = node.Attribute( Constants.XmlAttribute.Href ).Value;
+                string description = node.Attribute( Constants.XmlAttribute.Description ).Value;
+                string hash = node.Attribute( Constants.XmlAttribute.Hash ).Value;
+                string tag = node.Attribute( Constants.XmlAttribute.Tag ).Value;
+                string time = node.Attribute( Constants.XmlAttribute.Time ).Value;
+                string extended = (node.Attribute( Constants.XmlAttribute.Extended ) == null) ? String.Empty : node.Attribute( Constants.XmlAttribute.Extended ).Value;
                 bool shared = true;
-                if (node.Attributes[ Constants.XmlAttribute.Shared ] != null)
-                    shared = (node.Attributes[ Constants.XmlAttribute.Shared ].Value != Constants.UrlParameter.No);
+                if (node.Attribute( Constants.XmlAttribute.Shared ) != null)
+                    shared = (node.Attribute( Constants.XmlAttribute.Shared ).Value != Constants.UrlParameter.No);
 
                 Post post = new Post (href, description, hash, tag, time, extended, shared);
                 posts.Add (post);

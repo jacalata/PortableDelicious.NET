@@ -33,7 +33,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Xml;
+using System.Xml.Linq;
 
 namespace Delicious
 {
@@ -149,14 +149,14 @@ namespace Delicious
 			if (tag != null && tag.Length > 0)
 				connectUrl = Utilities.AddParameter (connectUrl, Constants.UrlParameter.Tag, tag);
 
-			XmlDocument xmlDoc = Connection.Connect (connectUrl);
-			XmlNodeList nodeList = xmlDoc.DocumentElement.GetElementsByTagName (Constants.XmlTag.Date);
-			List<Date> dates = new List<Date> (nodeList.Count);
+			XDocument xmlDoc = Connection.Connect (connectUrl);
+            System.Collections.Generic.List<XElement> nodeList = new System.Collections.Generic.List<XElement>(xmlDoc.Elements(Constants.XmlTag.Post));
+            List<Date> dates = new List<Date>(nodeList.Count);
 
-			foreach (XmlNode node in nodeList)
+			foreach (XElement node in nodeList)
 			{
-				string date = node.Attributes[ Constants.XmlAttribute.Date ].Value;
-				int count = int.Parse (node.Attributes[ Constants.XmlAttribute.Count ].Value);
+				string date = node.Attribute( Constants.XmlAttribute.Date ).Value;
+				int count = int.Parse (node.Attribute( Constants.XmlAttribute.Count ).Value);
 
 				Date subscription = new Date (date, count);
 				dates.Add (subscription);
@@ -174,14 +174,14 @@ namespace Delicious
 		{
 			string connectUrl = Constants.RelativeUrl.InboxDates;
 
-			XmlDocument xmlDoc = Connection.Connect (connectUrl);
-			XmlNodeList nodeList = xmlDoc.DocumentElement.GetElementsByTagName (Constants.XmlTag.Date);
-			List<Date> dates = new List<Date> (nodeList.Count);
+			XDocument xmlDoc = Connection.Connect (connectUrl);
+            System.Collections.Generic.List<XElement> nodeList = new System.Collections.Generic.List<XElement>(xmlDoc.Elements(Constants.XmlTag.Post));
+            List<Date> dates = new List<Date>(nodeList.Count);
 
-			foreach (XmlNode node in nodeList)
+			foreach (XElement node in nodeList)
 			{
-				string date = node.Attributes[ Constants.XmlAttribute.Date ].Value;
-				int count = int.Parse (node.Attributes[ Constants.XmlAttribute.Count ].Value);
+				string date = node.Attribute( Constants.XmlAttribute.Date ).Value;
+				int count = int.Parse (node.Attribute( Constants.XmlAttribute.Count ).Value);
 
 				Date subscription = new Date (date, count);
 				dates.Add (subscription);

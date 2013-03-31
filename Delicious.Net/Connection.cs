@@ -4,6 +4,7 @@
 /*
  * Copyright (c) 2006-2008, Nate Zobrist
  * All rights reserved.
+ * Updated by Jac Fitzgerald 2013
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +44,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading;
-using System.Xml;
+using System.Xml.Linq;
 
 namespace Delicious
 {
@@ -54,41 +55,27 @@ namespace Delicious
 		private static int _MaxRetries = Constants.MaxRetries;
 		private static int _TimeOut = Constants.DefaultTimeOut;
 		private static string _ApiBaseUrl;
+        private static string _relativeUrl;
+        public static string rawXml;
 
-		private static DateTime lastConnectTime = DateTime.MinValue;
-
-
-		/// <summary>
-		/// Connect to the del.icio.us API, returning an <c>XmlDocument</c> of the response
-		/// </summary>
-		/// <param name="relativeUrl">Constant defined in <c>Delicious.Constants.RelativeUrl</c></param>
-		/// <returns>XmlDocument containing data from the del.icio.us api call</returns>
-		internal static XmlDocument Connect (string relativeUrl)
-		{
-			System.Xml.XmlDocument xmlDoc;
-			try
-			{
-				xmlDoc = new System.Xml.XmlDocument();
-				xmlDoc.LoadXml (GetRawXml (relativeUrl));
-			}
-			catch (XmlException)
-			{
-				throw new Exceptions.DeliciousException ("The webserver did not return valid XML.");
-			}
-
-			return xmlDoc;
-		}
+        private static int _callCount;
+        private static DateTime lastConnectTime = DateTime.MinValue;
 
 
 		/// <summary>
-		/// Connect to the del.icio.us API, returning the raw xml response
+		/// Connect to the del.icio.us API, returning an <c>XDocument</c> of the response
 		/// </summary>
 		/// <param name="relativeUrl">Constant defined in <c>Delicious.Constants.RelativeUrl</c></param>
-		/// <returns>string containing raw xml data from the del.icio.us api call</returns>
-		internal static string GetRawXml (string relativeUrl)
-		{
-			return GetRawXml (relativeUrl, 0);
-		}
+		/// <returns>XDocument containing data from the del.icio.us api call</returns>
+		internal static void Connect (string relativeUrl)
+        {
+            _relativeUrl = relativeUrl;
+            GetRawXml();
+            
+            // add eventhandler?
+        }
+
+    
 
 
 		/// <summary>
@@ -99,56 +86,76 @@ namespace Delicious
 		/// <param name="callCount">Beginning at 0, this number should be incremented by one each time the method
 		/// is recursively called due to a Timeout error.  The increased number will increase the forced delay
 		/// in contacting the del.icio.us servers.</param>
-		/// <returns>XmlDocument containing data from the del.icio.us api call</returns>
-		private static string GetRawXml (string relativeUrl, int callCount)
+		/// <returns>XDocument containing data from the del.icio.us api call</returns>
+		private static void GetRawXml ()
 		{
 			int millisecondsBetweenQueries = Constants.MinimumMillisecondsBetweenQueries +
-			                                 (1000 * callCount * callCount);
+                                             (1000 * _callCount * _callCount);
+            
+            bool wait = true;
+            if (lastConnectTime == new DateTime())
+            {
+                // have never connected before, no waiting needed
+                wait = false;
+            }
 
-			string fullUrl = ApiBaseUrl + relativeUrl;
-			string rawXml;
+            while(wait == true) // Sleep, Wait, etc are not fully portable
+            {
+                if (System.DateTime.Now == lastConnectTime.AddMilliseconds((double)millisecondsBetweenQueries) )
+                    wait = false; // waited long enough
+            }
 
-			TimeSpan span = System.DateTime.Now - lastConnectTime.AddMilliseconds (millisecondsBetweenQueries);
-			if (span.TotalMilliseconds < 0)
-				Thread.Sleep (Math.Abs ((int)span.TotalMilliseconds));
+			string fullUrl = ApiBaseUrl + _relativeUrl;
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create (fullUrl);
+            request.Credentials = new System.Net.NetworkCredential (Username, Password);
+            //request.Timeout = TimeOut;
+            //request.AllowAutoRedirect = false;
+            //request.UserAgent = Constants.UserAgentValue;
+            //request.MaximumResponseHeadersLength = 4;
+            //request.KeepAlive = false;
+            //request.Pipelined = false;
+            //response = (HttpWebResponse)
+            request.BeginGetResponse(new AsyncCallback(receiveDeliciousResponse), null); // have to make it async in the portable library
+            // need to add an event handler method in the calling layers? 
+        }
 
+
+        public static void receiveDeliciousResponse(System.IAsyncResult result) //object sender, EventArgs evt)
+        {
+            http://social.msdn.microsoft.com/forums/en-us/wpdevelop/thread/4adbcfe2-0c62-4e6a-9765-86ba8a35d743
+
+            var request = (HttpWebRequest) result.AsyncState; //is giving me null?
+            if (request == null)
+                return; // BAD NO LAZY TODO
 			HttpWebResponse response = null;
-			StreamReader readStream = null;
+            StreamReader readStream = null;
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create (fullUrl);
-                request.Credentials = new System.Net.NetworkCredential (Username, Password);
-                request.Timeout = TimeOut;
-                request.AllowAutoRedirect = false;
-                request.UserAgent = Constants.UserAgentValue;
-                request.MaximumResponseHeadersLength = 4;
-                request.KeepAlive = false;
-                request.Pipelined = false;
-                response = (HttpWebResponse)request.GetResponse ();
-                Stream receiveStream = response.GetResponseStream ();
-                readStream = new StreamReader (receiveStream, Encoding.UTF8);
-                rawXml = readStream.ReadToEnd ();
-
+                response = (HttpWebResponse) request.EndGetResponse(result);
+                var streamResponse = response.GetResponseStream();
+                readStream = new StreamReader(streamResponse);
+                rawXml = readStream.ReadToEnd(); 
                 lastConnectTime = System.DateTime.Now;
             }
             catch (WebException e)
             {
-                if (e.Status == WebExceptionStatus.ProtocolError ||
-                    e.Status == WebExceptionStatus.Timeout)
+                if (e.Status == WebExceptionStatus.ConnectFailure) 
                 {
                     HttpWebResponse webResponse = e.Response as HttpWebResponse;
                     if (webResponse != null)
                     {
                         // del.icio.us servers seem to have less-than-ideal response times quite often.
                         // we try to compensate for those probelms, but eventually error out.
-                        if (e.Status == WebExceptionStatus.Timeout ||
-                            webResponse.StatusCode == HttpStatusCode.ServiceUnavailable /*503 we have been throttled*/||
+                        if (webResponse.StatusCode == HttpStatusCode.ServiceUnavailable /*503 we have been throttled*/||
                             (int)webResponse.StatusCode == 999 /*Unable to process request at this time*/)
                         {
-                            if (callCount < MaxRetries) // don't loop endlessly here, eventually just error out
-                                return GetRawXml (relativeUrl, callCount + 1);
+                            if (_callCount < MaxRetries) // don't loop endlessly here, eventually just error out
+                            {
+                                _callCount += 1;
+                                GetRawXml();
+                            }
                             else
-                                throw new Exceptions.DeliciousTimeoutException (String.Format ("The server is not responding.\t{0}", webResponse.StatusCode));
+                                throw new Exceptions.DeliciousTimeoutException(String.Format("The server is not responding.\t{0}", webResponse.StatusCode));
                         }
                         else if (webResponse.StatusCode == HttpStatusCode.Unauthorized /*401*/)
                         {
@@ -171,12 +178,12 @@ namespace Delicious
             finally
 			{
 				if (response != null)
-					response.Close();
+					response.Dispose();
 				if (readStream != null)
-					readStream.Close();
+					readStream.Dispose();
 			}
 
-			return rawXml;
+			//return rawXml;
 		}
 
 
@@ -262,27 +269,31 @@ namespace Delicious
 		/// <returns>Returns a DateTime representing the last update time or DateTime.MinValue if there was an error</returns>
 		public static DateTime LastUpdated ()
 		{
+            throw new NotImplementedException();
+            /*
 			DateTime lastUpdated = DateTime.MinValue;
 
-			System.Xml.XmlDocument xmlDoc = Connection.Connect (Constants.RelativeUrl.PostsUpdate);
+			System.Xml.Linq.XDocument xmlDoc = Connection.Connect (Constants.RelativeUrl.PostsUpdate);
 			if (xmlDoc == null)
 				return DateTime.MinValue;
 
-			XmlElement xmlElement = xmlDoc[ Constants.XmlTag.Update ];
+            //not sure about what this should be doing, need to check what the actual xml looks like
+			System.Xml.Linq.XElement xmlElement = xmlDoc.Element(Constants.XmlTag.Update);
 			if (xmlElement != null)
 			{
-				string time = xmlElement.GetAttribute (Constants.XmlAttribute.Time);
+				string time = xmlElement.Attribute (Constants.XmlAttribute.Time).ToString();
                 try
                 {
                     lastUpdated = DateTime.Parse (time, CultureInfo.InvariantCulture);
                 }
                 catch (FormatException e)
                 {
-                    Debug.Fail (e.ToString ());
+                    Debug.WriteLine(e.ToString ()); 
                 }
 			}
 
 			return lastUpdated;
+             * */
 		}
 	}
 }

@@ -33,7 +33,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Xml;
+using System.Xml.Linq;
 
 namespace Delicious
 {
@@ -146,19 +146,22 @@ namespace Delicious
 		/// <returns>ArrayList of <c>Tag</c> objects</returns>
 		public static List<Tag> Get ()
 		{
-			XmlDocument xmlDoc = Connection.Connect (Constants.RelativeUrl.TagsGet);
-			XmlNodeList nodeList = xmlDoc.DocumentElement.GetElementsByTagName (Constants.XmlTag.Tag);
-			List<Tag> tags = new List<Tag> (nodeList.Count);
+            throw new NotImplementedException();
+            /*
+			XDocument xmlDoc = Connection.Connect (Constants.RelativeUrl.TagsGet);
+            System.Collections.Generic.List<XElement> nodeList = new System.Collections.Generic.List<XElement>(xmlDoc.Elements(Constants.XmlTag.Post));
+            List<Tag> tags = new List<Tag>(nodeList.Count);
 
-			foreach (XmlNode node in nodeList)
+			foreach (XElement node in nodeList)
 			{
-				string name = node.Attributes[ Constants.XmlAttribute.Tag ].Value.ToString();
-				int count = int.Parse (node.Attributes[ Constants.XmlAttribute.Count ].Value.ToString());
+				string name = node.Attribute( Constants.XmlAttribute.Tag ).Value.ToString();
+				int count = int.Parse (node.Attribute( Constants.XmlAttribute.Count ).Value.ToString());
 				Tag tag = new Tag (name, count);
 				tags.Add (tag);
 			}
 
 			return tags;
+             * */
 		}
 
 
@@ -179,15 +182,20 @@ namespace Delicious
 			string relativeUrl = Constants.RelativeUrl.TagsRename;
 			relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.Old, oldName);
 			relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.New, newName);
-			XmlDocument xmlDoc = Connection.Connect (relativeUrl);
-			XmlNodeList nodeList = xmlDoc.DocumentElement.GetElementsByTagName (Constants.XmlTag.Result);
-			if (nodeList.Count == 1)
+            
+            Connection.Connect(relativeUrl);
+            return true; // doesn't have a result from the request
+            /*
+			XDocument xmlDoc = Connection.Connect (relativeUrl);
+            System.Collections.Generic.List<XElement> nodeList = new System.Collections.Generic.List<XElement>(xmlDoc.Elements(Constants.XmlTag.Post));
+            if (nodeList.Count == 1)
 			{
 				string done = nodeList[ 0 ].Value;
 				return (done == Constants.ReturnCode.Done);
 			}
 
 			return false;
+             * */
 		}
 
 

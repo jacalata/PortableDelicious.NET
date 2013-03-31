@@ -33,7 +33,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Xml;
+using System.Xml.Linq;
 
 namespace Delicious
 {
@@ -149,10 +149,13 @@ namespace Delicious
 			string relativeUrl = Constants.RelativeUrl.BundlesSet;
 			relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.Bundle, bundleName);
 			relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.Tags, tags);
-
-			XmlDocument xmlDoc = Connection.Connect (relativeUrl);
-			string resultCode = Utilities.ParseForResultCode (xmlDoc.DocumentElement);
+            Connection.Connect(relativeUrl);
+            return true; // doesn't have a result from the request
+            /*
+			XDocument xmlDoc = Connection.Connect (relativeUrl);
+			string resultCode = Utilities.ParseForResultCode (xmlDoc);
 			return (resultCode == Constants.ReturnCode.Ok);
+             * */
 		}
 
 
@@ -169,9 +172,14 @@ namespace Delicious
 
 			string relativeUrl = Constants.RelativeUrl.BundlesDelete;
 			relativeUrl = Utilities.AddParameter (relativeUrl, Constants.UrlParameter.Bundle, bundleName);
-			XmlDocument xmlDoc = Connection.Connect (relativeUrl);
-			string resultCode = Utilities.ParseForResultCode (xmlDoc.DocumentElement);
+            
+            Connection.Connect(relativeUrl);
+            return true; // doesn't have a result from the request
+            /*
+			XDocument xmlDoc = Connection.Connect (relativeUrl);
+			string resultCode = Utilities.ParseForResultCode (xmlDoc);
 			return (resultCode == Constants.ReturnCode.Ok);
+             * */
 		}
 
 
@@ -181,20 +189,23 @@ namespace Delicious
 		/// <returns>List of <c>Bundle</c> objects</returns>
 		public static List<Bundle> Get ()
 		{
-			XmlDocument xmlDoc = Connection.Connect (Constants.RelativeUrl.BundlesAll);
-			XmlNodeList nodeList = xmlDoc.DocumentElement.GetElementsByTagName (Constants.XmlTag.Bundle);
-			List<Bundle> bundles = new List<Bundle> (nodeList.Count);
+            throw new NotImplementedException();
+            /*
+			XDocument xmlDoc = Connection.Connect (Constants.RelativeUrl.BundlesAll);
+            System.Collections.Generic.List<XElement> nodeList = new System.Collections.Generic.List<XElement>(xmlDoc.Elements(Constants.XmlTag.Post));
+            List<Bundle> bundles = new List<Bundle>(nodeList.Count);
 
-			foreach (XmlNode node in nodeList)
+			foreach (XElement node in nodeList)
 			{
-				string name = node.Attributes[ Constants.XmlAttribute.Name ].Value;
-				string tags = node.Attributes[ Constants.XmlAttribute.Tags ].Value;
+				string name = node.Attribute( Constants.XmlAttribute.Name ).Value;
+				string tags = node.Attribute( Constants.XmlAttribute.Tags ).Value;
 
 				Bundle bundle = new Bundle (name, tags);
 				bundles.Add (bundle);
 			}
 
 			return bundles;
+             * */
 		}
 
 

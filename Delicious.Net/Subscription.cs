@@ -34,7 +34,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Xml;
+using System.Xml.Linq;
 
 using Delicious.Exceptions;
 
@@ -141,7 +141,7 @@ namespace Delicious
 			if (tag != null && tag.Length > 0)
 				connectUrl = Utilities.AddParameter (connectUrl, Constants.UrlParameter.Tag, tag);
 
-			XmlDocument xmlDoc = Connection.Connect (connectUrl);
+			XDocument xmlDoc = Connection.Connect (connectUrl);
 			string resultCode = Utilities.ParseForResultCode (xmlDoc.DocumentElement);
 			return (resultCode == Constants.ReturnCode.XmlTagOk);
 		}
@@ -155,7 +155,7 @@ namespace Delicious
 		{
 			string connectUrl = Constants.RelativeUrl.InboxSubs;
 
-			XmlDocument xmlDoc = Connection.Connect (connectUrl);
+			XDocument xmlDoc = Connection.Connect (connectUrl);
 			XmlNodeList nodeList = xmlDoc.DocumentElement.GetElementsByTagName (Constants.XmlTag.Sub);
 			List<Subscription> subscriptions = new List<Subscription> (nodeList.Count);
 
@@ -187,7 +187,7 @@ namespace Delicious
 			if (tag != null && tag.Length > 0)
 				connectUrl = Utilities.AddParameter (connectUrl, Constants.UrlParameter.Tag, tag);
 
-			XmlDocument xmlDoc = Connection.Connect (connectUrl);
+			XDocument xmlDoc = Connection.Connect (connectUrl);
 			string resultCode = Utilities.ParseForResultCode (xmlDoc.DocumentElement);
 			return (resultCode == Constants.ReturnCode.XmlTagOk);
 		}
